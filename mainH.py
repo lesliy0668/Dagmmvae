@@ -1,0 +1,71 @@
+import os
+import argparse
+from solver import Solver
+from data_loader import get_loader
+from torch.backends import cudnn
+from utils import *
+
+def str2bool(v):
+    return v.lower() in ('true')
+
+def main(config):
+    # For fast training
+    cudnn.benchmark = True
+
+    # Create directories if not exist
+    mkdir(config.log_path)
+    mkdir(config.model_save_path)
+    print("load dataset...")
+    data_loader = get_loader(config.data_path, batch_size=config.batch_size, mode=config.mode,typename="Hospital")
+    
+    print("done!")
+    # Solver
+    solver = Solver(data_loader, vars(config),105)
+    # solver.autoK()
+    
+    if config.mode == 'train':
+        solver.train()
+    elif config.mode == 'test':
+        solver.test()
+
+    return solver
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    # Model hyper-parameters
+    parser.add_argument('--lr', type=float, default=1e-4)
+
+
+    # Training settings
+    parser.add_argument('--num_epochs', type=int, default=200)
+    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--gmm_k', type=int, default=4)
+    parser.add_argument('--lambda_energy', type=float, default=0.1)
+    parser.add_argument('--lambda_cov_diag', type=float, default=0.005)
+    parser.add_argument('--pretrained_model', type=str, default="dagmm/ex5/models/0.695286980867942_best_dagmm.pth")
+    #"dagmm/ex2/models/0.7125867195242814_best_dagmm.pth"
+    #"dagmm/ex5/models/0.695286980867942_best_dagmm.pth"
+    # Misc
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
+    parser.add_argument('--use_tensorboard', type=str2bool, default=True)
+
+    # Path
+    parser.add_argument('--data_path', type=str, default='dataset/features1.txt')
+    parser.add_argument('--log_path', type=str, default='./dagmm/exK5/logs')
+    parser.add_argument('--model_save_path', type=str, default='./dagmm/exK5/models')
+
+    # Step size
+    parser.add_argument('--log_step', type=int, default=100)
+    parser.add_argument('--backbone', type=str, default="VAE", choices=['VAE', 'DAE'])
+    parser.add_argument('--sample_step', type=int, default=194)
+    parser.add_argument('--model_save_step', type=int, default=194)
+
+    config = parser.parse_args()
+ 
+    args = vars(config)
+    print('------------ Options -------------')
+    for k, v in sorted(args.items()):
+        print('%s: %s' % (str(k), str(v)))
+    print('-------------- End ----------------')
+
+    main(config)
